@@ -44,23 +44,25 @@ public class ConsultaDAO {
 
 
     public List<ConsultaPOJO> findAll() throws SQLException {
-        List<ConsultaPOJO> consultas = new ArrayList<>();
-        String sql = "SELECT * FROM consulta WHERE ativo = true";
+    List<ConsultaPOJO> consultas = new ArrayList<>();
+    String sql = "SELECT * FROM consulta WHERE ativo = true";
 
-        try (Connection conn = new ConnectionFactory().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                ConsultaPOJO consulta = new ConsultaPOJO();
-                consulta.setId(rs.getInt("id"));
-                consulta.setDataHora(rs.getTimestamp("data_hora").toLocalDateTime());
-                consulta.setAtivo(rs.getBoolean("ativo"));
-                consultas.add(consulta);
-            }
+    try (Connection conn = new ConnectionFactory().getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql);
+         ResultSet rs = pstmt.executeQuery()) {
+
+        while (rs.next()) {
+            ConsultaPOJO consulta = new ConsultaPOJO();
+            consulta.setId(rs.getInt("id"));
+            Timestamp ts = rs.getTimestamp("data_hora");
+            consulta.setDataHora(ts != null ? ts.toLocalDateTime() : null);
+            consulta.setAtivo(rs.getBoolean("ativo"));
+            // Assumindo que já existem métodos para setar Paciente e Medico baseado em seus IDs
+            consultas.add(consulta);
         }
-        return consultas;
     }
+    return consultas;
+}
 
     public ConsultaPOJO findById(int id) throws SQLException {
         ConsultaPOJO consulta = null;
@@ -88,16 +90,16 @@ public class ConsultaDAO {
     try (Connection conn = new ConnectionFactory().getConnection();
          PreparedStatement pstmt = conn.prepareStatement(sql)) {
         
+        LocalDateTime localDateTime = consulta.getDataHora();
+        Timestamp timestamp = Timestamp.valueOf(localDateTime);
+
         pstmt.setInt(1, consulta.getPaciente().getId());
         pstmt.setInt(2, consulta.getMedico().getId());
-        pstmt.setTimestamp(3, java.sql.Timestamp.valueOf(consulta.getDataHora()));
+        pstmt.setTimestamp(3, timestamp);
         pstmt.setBoolean(4, consulta.isAtivo());
         pstmt.setInt(5, consulta.getId());
 
-        int affectedRows = pstmt.executeUpdate();
-        if (affectedRows == 0) {
-            throw new SQLException("Atualização da consulta falhou, nenhuma linha afetada.");
-        }
+        pstmt.executeUpdate();
     }
 }
 
