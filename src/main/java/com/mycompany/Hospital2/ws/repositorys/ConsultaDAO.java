@@ -22,9 +22,12 @@ public class ConsultaDAO {
         try (Connection conn = new ConnectionFactory().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
             
+            LocalDateTime localDateTime = consulta.getDataHora();
+            Timestamp timestamp = Timestamp.valueOf(localDateTime);
+            
             pstmt.setInt(1, consulta.getPaciente().getId());
             pstmt.setInt(2, consulta.getMedico().getId());
-            pstmt.setTimestamp(3, Timestamp.valueOf(consulta.getDataHora()));
+            pstmt.setTimestamp(3, timestamp);
             pstmt.setBoolean(4, consulta.isAtivo());
 
             pstmt.executeUpdate();
