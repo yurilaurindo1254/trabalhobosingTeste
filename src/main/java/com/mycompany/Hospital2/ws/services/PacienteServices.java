@@ -43,10 +43,24 @@ public class PacienteServices {
         return paciente;
     }
 
-    public PacientePOJO updatePaciente(PacientePOJO paciente) throws SQLException, ValidacaoException {
-        validar(paciente);
-        pacienteDAO.update(paciente);
-        return paciente;
+    public PacientePOJO updatePaciente(PacientePOJO updatedPaciente) throws SQLException, ValidacaoException {
+        validar(updatedPaciente);
+
+        PacientePOJO existingPaciente = findByIdPaciente(updatedPaciente.getId());
+        if (existingPaciente == null) {
+            throw new ValidacaoException("Paciente não encontrado.");
+        }
+
+        if (!existingPaciente.getPessoa().getEmail().equals(updatedPaciente.getPessoa().getEmail())) {
+            throw new ValidacaoException("Não é permitido alterar o e-mail do paciente.");
+        }
+
+        if (!existingPaciente.getPessoa().getCpf().equals(updatedPaciente.getPessoa().getCpf())) {
+            throw new ValidacaoException("Não é permitido alterar o CPF do paciente.");
+        }
+
+        pacienteDAO.update(updatedPaciente);
+        return updatedPaciente;
     }
 
     public void desactivatePaciente(int id) throws SQLException, ValidacaoException {

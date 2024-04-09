@@ -10,16 +10,22 @@ public class MedicoPOJO extends AtivoAbstract {
     private int id;
     private PessoaPOJO pessoa;
     private String crm;
+    private EspecialidadePOJO especialidade;
 
     public MedicoPOJO() {
     }
 
-    public MedicoPOJO(int id, PessoaPOJO pessoa, String crm, boolean ativo) {
+    public MedicoPOJO(int id, PessoaPOJO pessoa, String crm, EspecialidadePOJO especialidade, boolean ativo) {
         super(ativo);
         this.id = id;
         this.pessoa = pessoa;
         this.crm = crm;
+        this.especialidade = especialidade;
     }
+
+    
+
+    
 
     public int getId() {
         return id;
@@ -44,5 +50,23 @@ public class MedicoPOJO extends AtivoAbstract {
     public void setCrm(String crm) {
         this.crm = crm;
     }
+
+    public EspecialidadePOJO getEspecialidade() {
+        return especialidade;
+    }
+
+    public void setEspecialidade(EspecialidadePOJO especialidade) {
+        this.especialidade = especialidade;
+    }
+
+    public boolean isAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(boolean ativo) {
+        this.ativo = ativo;
+    }
+    
+    
  
 }

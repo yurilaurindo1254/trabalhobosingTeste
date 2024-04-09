@@ -9,28 +9,26 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 public class ConsultaDAO {
 
     private static final String INSERT_SQL = "INSERT INTO consulta (paciente_id, medico_id, data_hora, ativo) VALUES (?, ?, ?, ?) RETURNING id;";
 
-     public ConsultaPOJO insert(ConsultaPOJO consulta) throws SQLException {
+    public ConsultaPOJO insert(ConsultaPOJO consulta) throws SQLException {
         try (Connection conn = new ConnectionFactory().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
             
-            LocalDateTime localDateTime = consulta.getDataHora();
-            Timestamp timestamp = Timestamp.valueOf(localDateTime);
-            
             pstmt.setInt(1, consulta.getPaciente().getId());
             pstmt.setInt(2, consulta.getMedico().getId());
-            pstmt.setTimestamp(3, timestamp);
+            pstmt.setTimestamp(3, new Timestamp(consulta.getDataHora().getTime()));
             pstmt.setBoolean(4, consulta.isAtivo());
-
+            
             pstmt.executeUpdate();
+            
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     consulta.setId(generatedKeys.getInt(1));
@@ -42,27 +40,25 @@ public class ConsultaDAO {
         return consulta;
     }
 
-
     public List<ConsultaPOJO> findAll() throws SQLException {
-    List<ConsultaPOJO> consultas = new ArrayList<>();
-    String sql = "SELECT * FROM consulta WHERE ativo = true";
+        List<ConsultaPOJO> consultas = new ArrayList<>();
+        String sql = "SELECT * FROM consulta WHERE ativo = true";
 
-    try (Connection conn = new ConnectionFactory().getConnection();
-         PreparedStatement pstmt = conn.prepareStatement(sql);
-         ResultSet rs = pstmt.executeQuery()) {
+        try (Connection conn = new ConnectionFactory().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
 
-        while (rs.next()) {
-            ConsultaPOJO consulta = new ConsultaPOJO();
-            consulta.setId(rs.getInt("id"));
-            Timestamp ts = rs.getTimestamp("data_hora");
-            consulta.setDataHora(ts != null ? ts.toLocalDateTime() : null);
-            consulta.setAtivo(rs.getBoolean("ativo"));
-            // Assumindo que já existem métodos para setar Paciente e Medico baseado em seus IDs
-            consultas.add(consulta);
+            while (rs.next()) {
+                ConsultaPOJO consulta = new ConsultaPOJO();
+                consulta.setId(rs.getInt("id"));
+                consulta.setDataHora(new Date(rs.getTimestamp("data_hora").getTime()));
+                consulta.setAtivo(rs.getBoolean("ativo"));
+                // Assumindo que já existem métodos para setar Paciente e Medico baseado em seus IDs
+                consultas.add(consulta);
+            }
         }
+        return consultas;
     }
-    return consultas;
-}
 
     public ConsultaPOJO findById(int id) throws SQLException {
         ConsultaPOJO consulta = null;
@@ -76,7 +72,7 @@ public class ConsultaDAO {
                 if (rs.next()) {
                     consulta = new ConsultaPOJO();
                     consulta.setId(rs.getInt("id"));
-                    consulta.setDataHora(rs.getTimestamp("data_hora").toLocalDateTime());
+                    consulta.setDataHora(new Date(rs.getTimestamp("data_hora").getTime()));
                     consulta.setAtivo(rs.getBoolean("ativo"));
                 }
             }
@@ -85,24 +81,20 @@ public class ConsultaDAO {
     }
 
     public void update(ConsultaPOJO consulta) throws SQLException {
-    String sql = "UPDATE consulta SET paciente_id = ?, medico_id = ?, data_hora = ?, ativo = ? WHERE id = ?";
+        String sql = "UPDATE consulta SET paciente_id = ?, medico_id = ?, data_hora = ?, ativo = ? WHERE id = ?";
 
-    try (Connection conn = new ConnectionFactory().getConnection();
-         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-        
-        LocalDateTime localDateTime = consulta.getDataHora();
-        Timestamp timestamp = Timestamp.valueOf(localDateTime);
+        try (Connection conn = new ConnectionFactory().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, consulta.getPaciente().getId());
+            pstmt.setInt(2, consulta.getMedico().getId());
+            pstmt.setTimestamp(3, new Timestamp(consulta.getDataHora().getTime()));
+            pstmt.setBoolean(4, consulta.isAtivo());
+            pstmt.setInt(5, consulta.getId());
 
-        pstmt.setInt(1, consulta.getPaciente().getId());
-        pstmt.setInt(2, consulta.getMedico().getId());
-        pstmt.setTimestamp(3, timestamp);
-        pstmt.setBoolean(4, consulta.isAtivo());
-        pstmt.setInt(5, consulta.getId());
-
-        pstmt.executeUpdate();
+            pstmt.executeUpdate();
+        }
     }
-}
-
 
     public void deactivate(int id) throws SQLException {
         String sql = "UPDATE consulta SET ativo = false WHERE id = ?";
@@ -115,32 +107,27 @@ public class ConsultaDAO {
         }
     }
     
-    public List<MedicoPOJO> findMedicosDisponiveis(LocalDate date) throws SQLException {
-        List<MedicoPOJO> medicosDisponiveis = new ArrayList<>();
-        // Este SQL é hipotético, adaptar conforme o esquema de banco de dados
-        String sql = "SELECT * FROM medico WHERE id NOT IN (SELECT medico_id FROM consulta WHERE data_hora BETWEEN ? AND ? AND ativo = true)";
+    public void cancelarConsulta(int id, String motivoCancelamento) throws SQLException {
+    String sql = "UPDATE consulta SET ativo = false, motivo_cancelamento = ? WHERE id = ?";
 
-        try (Connection conn = new ConnectionFactory().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setDate(1, java.sql.Date.valueOf(date));
-            pstmt.setDate(2, java.sql.Date.valueOf(date.plusDays(1)));
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    MedicoPOJO medico = new MedicoPOJO();
-                    // Atribuir propriedades ao objeto medico a partir do ResultSet
-                    medicosDisponiveis.add(medico);
-                }
-            }
-        }
-        return medicosDisponiveis;
+    try (Connection conn = new ConnectionFactory().getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        
+        pstmt.setString(1, motivoCancelamento);
+        pstmt.setInt(2, id);
+        pstmt.executeUpdate();
     }
+}
+
     
-     public boolean existsConsultaNoDia(int pacienteId, LocalDate date) throws SQLException {
+    public boolean existsConsultaNoDia(int pacienteId, Date date) throws SQLException {
         String sql = "SELECT COUNT(*) FROM consulta WHERE paciente_id = ? AND CAST(data_hora AS DATE) = ? AND ativo = true";
         try (Connection conn = new ConnectionFactory().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setInt(1, pacienteId);
-            pstmt.setDate(2, java.sql.Date.valueOf(date));
+            pstmt.setDate(2, new java.sql.Date(date.getTime()));
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1) > 0;
@@ -149,13 +136,17 @@ public class ConsultaDAO {
         }
         return false;
     }
+    
+    
 
-    public boolean existsConsultaNoHorario(int medicoId, LocalDateTime dateTime) throws SQLException {
+    public boolean existsConsultaNoHorario(int medicoId, Date dateTime) throws SQLException {
         String sql = "SELECT COUNT(*) FROM consulta WHERE medico_id = ? AND data_hora = ? AND ativo = true";
         try (Connection conn = new ConnectionFactory().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setInt(1, medicoId);
-            pstmt.setTimestamp(2, java.sql.Timestamp.valueOf(dateTime));
+            pstmt.setTimestamp(2, new Timestamp(dateTime.getTime()));
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1) > 0;

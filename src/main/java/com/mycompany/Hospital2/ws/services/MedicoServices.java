@@ -47,10 +47,22 @@ public class MedicoServices {
         return medico;
     }
 
-    public MedicoPOJO updateMedico(MedicoPOJO medico) throws SQLException, ValidacaoException {
-        validar(medico);
-        medicoDAO.update(medico);
-        return medico;
+    public MedicoPOJO updateMedico(MedicoPOJO updatedMedico) throws SQLException, ValidacaoException {
+        validar(updatedMedico);
+
+        MedicoPOJO existingMedico = findByIdMedico(updatedMedico.getId());
+        if (!existingMedico.getPessoa().getEmail().equals(updatedMedico.getPessoa().getEmail())) {
+            throw new ValidacaoException("Não é permitido alterar o e-mail do médico.");
+        }
+        if (!existingMedico.getCrm().equals(updatedMedico.getCrm())) {
+            throw new ValidacaoException("Não é permitido alterar o CRM do médico.");
+        }
+        if (!existingMedico.getEspecialidade().equals(updatedMedico.getEspecialidade())) {
+            throw new ValidacaoException("Não é permitido alterar a Especialidade do médico.");
+        }
+
+        medicoDAO.update(updatedMedico);
+        return updatedMedico;
     }
 
     public void desactivateMedico(int id) throws SQLException, ValidacaoException {
